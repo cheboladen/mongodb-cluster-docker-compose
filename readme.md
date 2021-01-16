@@ -55,17 +55,45 @@ docker-compose exec shard03-a sh -c "mongo < /scripts/init-shard03.js"
 docker-compose exec router01 sh -c "mongo < /scripts/init-router.js"
 ```
 
-- **Step 4: Enable sharding and setup sharding-key**
+- **Step 4: Import collections**
+```bash
+docker-compose exec router01 sh -c "mongoimport --db proyecto --collection zips --type json --file /scripts/zips.json"
+docker-compose exec router01 sh -c "mongoimport --db proyecto --collection city --type json --file /scripts/city.json"
+docker-compose exec router01 sh -c "mongoimport --db proyecto --collection trades --type json --file /scripts/trades.json"
+```
+
+- **Step 5: Enable sharding and setup sharding-key**
 ```bash
 docker-compose exec router01 mongo --port 27017
 
-// Enable sharding for database `MyDatabase`
-sh.enableSharding("MyDatabase")
+Enable sharding for database `proyecto`
+sh.enableSharding("proyecto")
 
-// Setup shardingKey for collection `MyCollection`**
-db.adminCommand( { shardCollection: "MyDatabase.MyCollection", key: { supplierId: "hashed" } } )
+Find one document from the zips collection, to help us choose a shard key:
+db.zips.findOne()
+
+Create an index on _id:
+db.zips.createIndex( { "_id" : 1 } )
+db.city.createIndex( { "_id" : 1 } )
+db.trades.createIndex( { "_id" : 1 } )
+
+Shard the zips collection on _id:
+sh.shardCollection("proyecto.zips", {"_id" : 1 } )
+sh.shardCollection("proyecto.city", {"_id" : 1 } )
+sh.shardCollection("proyecto.trades", {"_id" : 1 } )
+
+Checking the status of the sharded cluster:
+sh.status()
 
 ```
+- **Step 6: FULL Restart**
+
+docker-compose down
+rm -rf /home/fer/mongodb-cluster-docker-compose/mongodata
+docker rm -f $(docker ps -a -q)
+docker volume rm $(docker volume ls -q)
+docker-compose up -d
+
 
 >Done! but before you start inserting data you should verify them first
 
@@ -107,9 +135,9 @@ sh.status()
 > You should see 1 PRIMARY, 2 SECONDARY
 
 ```bash
-docker exec -it rydell-shard-01-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
-docker exec -it rydell-shard-02-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
-docker exec -it rydell-shard-03-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
+docker exec -it shard-01-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
+docker exec -it shard-02-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
+docker exec -it shard-03-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
 ```
 *Sample Result:*
 ```
@@ -250,9 +278,9 @@ bye
 - **Check database status**
 ```bash
 docker-compose exec router01 mongo --port 27017
-use MyDatabase
+use proyecto
 db.stats()
-db.MyCollection.getShardDistribution()
+db.zips.getShardDistribution()
 ```
 
 *Sample Result:*
@@ -260,7 +288,7 @@ db.MyCollection.getShardDistribution()
 {
         "raw" : {
                 "rs-shard-01/shard01-a:27017,shard01-b:27017,shard01-c:27017" : {
-                        "db" : "MyDatabase",
+                        "db" : "proyecto",
                         "collections" : 1,
                         "views" : 0,
                         "objects" : 0,
@@ -275,7 +303,7 @@ db.MyCollection.getShardDistribution()
                         "ok" : 1
                 },
                 "rs-shard-03/shard03-a:27017,shard03-b:27017,shard03-c:27017" : {
-                        "db" : "MyDatabase",
+                        "db" : "proyecto",
                         "collections" : 1,
                         "views" : 0,
                         "objects" : 0,
@@ -290,7 +318,7 @@ db.MyCollection.getShardDistribution()
                         "ok" : 1
                 },
                 "rs-shard-02/shard02-a:27017,shard02-b:27017,shard02-c:27017" : {
-                        "db" : "MyDatabase",
+                        "db" : "proyecto",
                         "collections" : 1,
                         "views" : 0,
                         "objects" : 0,
@@ -332,13 +360,13 @@ db.MyCollection.getShardDistribution()
 ### More commands
 
 ```bash
-docker exec -it rydell-mongo-config-01 bash -c "echo 'rs.status()' | mongo --port 27017"
+docker exec -it mongo-config-01 bash -c "echo 'rs.status()' | mongo --port 27017"
 
 
-docker exec -it rydell-shard-01-node-a bash -c "echo 'rs.help()' | mongo --port 27017"
-docker exec -it rydell-shard-01-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
-docker exec -it rydell-shard-01-node-a bash -c "echo 'rs.printReplicationInfo()' | mongo --port 27017" 
-docker exec -it rydell-shard-01-node-a bash -c "echo 'rs.printSlaveReplicationInfo()' | mongo --port 27017"
+docker exec -it shard-01-node-a bash -c "echo 'rs.help()' | mongo --port 27017"
+docker exec -it shard-01-node-a bash -c "echo 'rs.status()' | mongo --port 27017" 
+docker exec -it shard-01-node-a bash -c "echo 'rs.printReplicationInfo()' | mongo --port 27017" 
+docker exec -it shard-01-node-a bash -c "echo 'rs.printSlaveReplicationInfo()' | mongo --port 27017"
 ```
 
 ---

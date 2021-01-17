@@ -1,10 +1,6 @@
 Demo Mongo Sharded Cluster with Docker Compose
 =========================================
 
-### PSS Style (Primary -Secondary - Secondary)
-
-Need PSA? Check [here](https://github.com/minhhungit/mongodb-cluster-docker-compose/tree/master/PSA)
-
 ---
 
 ### WARNING (Windows & OS X) 
@@ -57,8 +53,6 @@ docker-compose exec router01 sh -c "mongo < /scripts/init-router.js"
 
 - **Step 4: Import collections**
 ```bash
-docker-compose exec router01 sh -c "mongoimport --db proyecto --collection zips --type json --file /scripts/zips.json"
-docker-compose exec router01 sh -c "mongoimport --db proyecto --collection city --type json --file /scripts/city.json"
 docker-compose exec router01 sh -c "mongoimport --db proyecto --collection trades --type json --file /scripts/trades.json"
 ```
 
@@ -69,31 +63,19 @@ docker-compose exec router01 mongo --port 27017
 Enable sharding for database `proyecto`
 sh.enableSharding("proyecto")
 
-Find one document from the zips collection, to help us choose a shard key:
-db.zips.findOne()
+Find one document from the trades collection, to help us choose a shard key:
+db.trades.findOne()
 
 Create an index on _id:
-db.zips.createIndex( { "_id" : 1 } )
-db.city.createIndex( { "_id" : 1 } )
 db.trades.createIndex( { "_id" : 1 } )
 
-Shard the zips collection on _id:
-sh.shardCollection("proyecto.zips", {"_id" : 1 } )
-sh.shardCollection("proyecto.city", {"_id" : 1 } )
+Shard the trades collection on _id:
 sh.shardCollection("proyecto.trades", {"_id" : 1 } )
 
 Checking the status of the sharded cluster:
 sh.status()
 
 ```
-- **Step 6: FULL Restart**
-
-docker-compose down
-rm -rf /home/fer/mongodb-cluster-docker-compose/mongodata
-docker rm -f $(docker ps -a -q)
-docker volume rm $(docker volume ls -q)
-docker-compose up -d
-
 
 >Done! but before you start inserting data you should verify them first
 
@@ -280,7 +262,7 @@ bye
 docker-compose exec router01 mongo --port 27017
 use proyecto
 db.stats()
-db.zips.getShardDistribution()
+db.trades.getShardDistribution()
 ```
 
 *Sample Result:*
@@ -378,14 +360,11 @@ The cluster only has to be initialized on the first run. Subsequent startup can 
 To remove all data and re-initialize the cluster, make sure the containers are stopped and then:
 
 ```bash
-docker-compose rm
-```
-
-### Clean up docker-compose
-```bash
 docker-compose down -v --rmi all --remove-orphans
+rm -rf /home/fer/mongodb-cluster-docker-compose/mongodata
+docker rm -f $(docker ps -a -q)
+docker volume rm $(docker volume ls -q)
 ```
-
 Execute the **First Run** instructions again.
 
 ### Screenshot

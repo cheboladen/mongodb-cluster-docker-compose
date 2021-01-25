@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ## Stop the cluster
 docker-compose down
 

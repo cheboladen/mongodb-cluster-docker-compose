@@ -74,7 +74,16 @@ sh.shardCollection("proyecto.trades", {"_id" : 1 } )
 
 Checking the status of the sharded cluster:
 sh.status()
+```
 
+- **Step 6: FULL Restart**
+```bash
+docker-compose down
+rm -rf /home/fer/mongodb-cluster-docker-compose/mongodata
+docker rm -f $(docker ps -a -q)
+docker volume rm $(docker volume ls -q)
+
+docker-compose up -d
 ```
 
 >Done! but before you start inserting data you should verify them first

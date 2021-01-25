@@ -74,6 +74,7 @@ sh.shardCollection("proyecto.trades", {"_id" : 1 } )
 
 Checking the status of the sharded cluster:
 sh.status()
+db.trades.getShardDistribution() 
 ```
 
 - **Step 6: FULL Restart**

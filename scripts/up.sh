@@ -15,6 +15,13 @@ docker-compose exec shard03-a sh -c "mongo < /scripts/init-shard03.js"
 sleep 15
 docker-compose exec router01 sh -c "mongo < /scripts/init-router.js"
 
-## Import dataset
+## Import dataset if it already exists in /scripts directory. Else, download before importing.
 sleep 10
-docker-compose exec router01 sh -c "mongoimport --db proyecto --collection trades --type json --file /scripts/trades.json"
+
+if [ -e trades.json ]
+then
+    docker-compose exec router01 sh -c "mongoimport --db proyecto --collection trades --type json --file /scripts/trades.json"
+else
+    wget https://dl.dropbox.com/s/gxbsj271j5pevec/trades.json
+    docker-compose exec router01 sh -c "mongoimport --db proyecto --collection trades --type json --file /scripts/trades.json"
+fi
